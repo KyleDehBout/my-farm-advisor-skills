@@ -31,37 +31,42 @@ Required metadata fields for each layer are:
 
 ## Runtime destination
 
-The downloader writes the standardized payloads into the canonical runtime tree at:
+The downloader runs from the copied runtime source and writes the standardized payloads into the canonical runtime tree at:
 
-- `data/my-farm-advisor/shared/geoadmin/l0_countries/`
-- `data/my-farm-advisor/shared/geoadmin/l1_states/`
-- `data/my-farm-advisor/shared/geoadmin/l2_counties/`
+- `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/geoadmin/l0_countries/`
+- `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/geoadmin/l1_states/`
+- `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/geoadmin/l2_counties/`
 
 Expected outputs are:
 
-- `data/my-farm-advisor/shared/geoadmin/l0_countries/countries.geojson`
-- `data/my-farm-advisor/shared/geoadmin/l0_countries/countries.parquet`
-- `data/my-farm-advisor/shared/geoadmin/l1_states/states_usa.geojson`
-- `data/my-farm-advisor/shared/geoadmin/l1_states/states_usa.parquet`
-- `data/my-farm-advisor/shared/geoadmin/l2_counties/counties_usa.geojson`
-- `data/my-farm-advisor/shared/geoadmin/l2_counties/counties_usa.parquet`
-- `data/my-farm-advisor/shared/geoadmin/l2_counties/fips_lookup.parquet`
+- `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/geoadmin/l0_countries/countries.geojson`
+- `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/geoadmin/l0_countries/countries.parquet`
+- `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/geoadmin/l1_states/states_usa.geojson`
+- `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/geoadmin/l1_states/states_usa.parquet`
+- `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/geoadmin/l2_counties/counties_usa.geojson`
+- `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/geoadmin/l2_counties/counties_usa.parquet`
+- `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/geoadmin/l2_counties/fips_lookup.parquet`
 
 ## How to run the downloader
 
-From `my-farm-advisor/data-pipeline/`:
+Set an explicit absolute runtime root, install the runtime copy, then run from `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/src`:
 
 ```bash
+export DATA_PIPELINE_DATA_ROOT=/absolute/path/to/my-farm-advisor-runtime
+cd my-farm-advisor/data-pipeline
 ./scripts/install.sh
-source /data/workspace/data/my-farm-advisor/data-pipeline/.venv/bin/activate
-python src/scripts/ingest/download_geoadmin.py --levels l0_countries l1_states l2_counties --census-year 2025
+cd "${DATA_PIPELINE_DATA_ROOT}/data-pipeline/src"
+"${DATA_PIPELINE_DATA_ROOT}/data-pipeline/.venv/bin/python" \
+  scripts/ingest/download_geoadmin.py --levels l0_countries l1_states l2_counties --census-year 2025
 ```
 
 Useful variants:
 
 ```bash
-python src/scripts/ingest/download_geoadmin.py --list-sources
-python src/scripts/ingest/download_geoadmin.py --levels l2_counties --force
+"${DATA_PIPELINE_DATA_ROOT}/data-pipeline/.venv/bin/python" \
+  scripts/ingest/download_geoadmin.py --list-sources
+"${DATA_PIPELINE_DATA_ROOT}/data-pipeline/.venv/bin/python" \
+  scripts/ingest/download_geoadmin.py --levels l2_counties --force
 ```
 
 The script resolves the upstream download URLs from the committed metadata/catalog and performs the downloads itself. No manual asset download step is required.

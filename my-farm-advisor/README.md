@@ -57,10 +57,10 @@ flowchart TD
     class farm_boundary,farm_tables,farm_reports,farm_logs,boundary_asset,soil_asset,satellite_asset,weather_asset,manifests_asset,derived_asset support
 ```
 
-The canonical on-disk shape looks like this:
+The canonical on-disk shape is generated under the runtime base `${DATA_PIPELINE_DATA_ROOT}/data-pipeline`. `DATA_PIPELINE_DATA_ROOT` is required and must be an absolute writable path outside this repository.
 
 ```text
-data/my-farm-advisor/
+${DATA_PIPELINE_DATA_ROOT}/data-pipeline/
 ├── growers/
 │   └── <grower_slug>/
 │       ├── grower.json
@@ -90,8 +90,8 @@ data/my-farm-advisor/
 
 Representative metadata files are generated into the runtime data tree when the pipeline runs:
 
-- grower metadata: `data/my-farm-advisor/growers/iowa-demo-grower/grower.json`
-- farm metadata: `data/my-farm-advisor/growers/iowa-demo-grower/farms/iowa-demo-farm/farm.json`
+- grower metadata: `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/growers/iowa-demo-grower/grower.json`
+- farm metadata: `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/growers/iowa-demo-grower/farms/iowa-demo-farm/farm.json`
 
 ## Deterministic Pipeline Entry Points
 
@@ -148,19 +148,19 @@ Examples already included in the skill tree:
 
 These shared resources support deterministic rebuilds and reporting without forcing every grower or farm to duplicate the same baseline datasets.
 
-Geoadmin payloads are handled a little differently from most small reference files: the committed items under `data-pipeline/src/shared/geoadmin/` are metadata records plus downloader code, while the generated GeoJSON/Parquet payloads are rebuilt at runtime under `data/my-farm-advisor/shared/geoadmin/{l0_countries,l1_states,l2_counties}/`. See [`docs/GEODATA.md`](docs/GEODATA.md) for the metadata locations, source URL conventions, runtime destinations, and downloader commands.
+Geoadmin payloads are handled a little differently from most small reference files: the committed items under `data-pipeline/src/shared/geoadmin/` are metadata records plus downloader code, while the generated GeoJSON/Parquet payloads are rebuilt at runtime under `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/geoadmin/{l0_countries,l1_states,l2_counties}/`. See [`docs/GEODATA.md`](docs/GEODATA.md) for the metadata locations, source URL conventions, runtime destinations, and downloader commands.
 
 ## Storage Modes
 
-The same farm data model can run in multiple storage modes.
+The same farm data model can run against any explicit external runtime root.
 
 ```mermaid
 flowchart LR
     accTitle: Farm Storage Modes
-    accDescr: Storage options for the farm data tree, showing the same canonical structure running in local checkout, mounted volume, or object-storage-backed runtime modes.
+    accDescr: Storage options for the farm data tree, showing the same canonical structure running under an explicit absolute runtime root on local disk, mounted volume, or object-storage-backed mounts.
 
-    canonical([🌾 Canonical farm tree]) --> local[💻 Local checkout]
-    canonical --> volume[📦 Mounted volume]
+    canonical([🌾 Canonical farm tree]) --> local[💻 External local root]
+    canonical --> volume[📦 Mounted volume root]
     canonical --> object_store[☁️ S3 or R2]
 
     classDef primary fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a5f
@@ -170,19 +170,26 @@ flowchart LR
     class local,volume,object_store support
 ```
 
-The shipped pipeline/runtime docs explicitly support:
+The shipped pipeline/runtime docs require:
 
-- local checkout mode: `data/my-farm-advisor/`
-- volume-backed runtime mode: `/data/workspace/data/my-farm-advisor/`
-- object-storage-backed sync paths such as S3 or R2, with `rsync --no-times` semantics documented for those mounts in [`data-pipeline/AGENTS.md`](data-pipeline/AGENTS.md)
+- `DATA_PIPELINE_DATA_ROOT` set to an absolute writable path outside the checkout.
+- runtime base `${DATA_PIPELINE_DATA_ROOT}/data-pipeline`.
+- runtime source copy `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/src`; pipeline commands run from this copy, not from checkout `src/`.
+- default runtime venv `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/.venv`, unless `DATA_PIPELINE_VENV_DIR` points to another absolute venv path.
+- generated outputs under runtime-base children such as `growers/`, `shared/`, reports, logs, and manifests.
 
-The runtime installer in [`data-pipeline/README.md`](data-pipeline/README.md) resolves the writable data root in this order:
+The installer in [`data-pipeline/README.md`](data-pipeline/README.md) does not choose a fallback root. A safe first run looks like this:
 
-1. `DATA_PIPELINE_DATA_ROOT`
-2. `/data/workspace/data/my-farm-advisor`
-3. local checkout-relative `data/my-farm-advisor`
+```bash
+export DATA_PIPELINE_DATA_ROOT=/absolute/path/to/my-farm-advisor-runtime
+cd my-farm-advisor/data-pipeline
+./scripts/install.sh
+cd "${DATA_PIPELINE_DATA_ROOT}/data-pipeline/src"
+"${DATA_PIPELINE_DATA_ROOT}/data-pipeline/.venv/bin/python" \
+  scripts/run_farm_pipeline.py --structure-test
+```
 
-That is why this skill can work in local mode, bind-volume mode, and S3/R2-backed persistent runtime setups without changing the conceptual farm model.
+User-level persistence uses `${XDG_CONFIG_HOME:-$HOME/.config}/environment.d/60-my-farm-advisor.conf` for future sessions only. It does not change the current shell, so command examples still export `DATA_PIPELINE_DATA_ROOT` before running the installer or runtime scripts.
 
 ## How It Runs
 
@@ -302,7 +309,7 @@ This skill is the main farm-specific intelligence layer. The rest of the reposit
 - This skill suite ships large supporting examples and shared data assets.
 - The deterministic scripts and data-tree helpers are part of the skill, not just external repo utilities.
 - Canonical path helpers live in [`data-pipeline/src/scripts/lib/paths.py`](data-pipeline/src/scripts/lib/paths.py).
-- Some workflows assume pulled large files or generated artifacts are available locally.
+- Some workflows assume pulled large files or generated artifacts are available under `${DATA_PIPELINE_DATA_ROOT}/data-pipeline`.
 - The nested subtree documents are the real operating surface; this README is the map, not the full manual.
 
 ## Quick Start

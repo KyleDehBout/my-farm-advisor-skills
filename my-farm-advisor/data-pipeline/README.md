@@ -7,24 +7,38 @@ first run; the scripts auto-bootstrap that environment before continuing.
 ## Quick start
 
 ```bash
-cd skills/my-farm-advisor/data-pipeline
-./scripts/install.sh               # optional preinstall; first script run also bootstraps automatically
-source /data/workspace/data/my-farm-advisor/data-pipeline/.venv/bin/activate
-python src/scripts/run_farm_pipeline.py \
+export DATA_PIPELINE_DATA_ROOT=/absolute/path/to/my-farm-advisor-runtime
+cd my-farm-advisor/data-pipeline
+./scripts/install.sh
+cd "${DATA_PIPELINE_DATA_ROOT}/data-pipeline/src"
+"${DATA_PIPELINE_DATA_ROOT}/data-pipeline/.venv/bin/python" \
+  scripts/run_farm_pipeline.py \
   --grower-slug il-champaign-grower \
   --farm-slug champaign-demo-farm \
   --seed 77 --count 5 --force
 ```
 
-`install.sh` looks for a writable data root in this order:
+`DATA_PIPELINE_DATA_ROOT` is required. Set it to an absolute writable path outside the skill checkout before running the installer or any pipeline entrypoint. There is no implicit fallback to a platform workspace path or to a checkout-local `data/` directory.
 
-1. `DATA_PIPELINE_DATA_ROOT` (explicit override)
-2. `/data/workspace/data/my-farm-advisor` (OpenClaw default)
-3. `../../../../data/my-farm-advisor` relative to the skill (local checkout)
+The installer creates and refreshes the runtime tree under:
 
-A matching `.venv/` directory is created under
-`${DATA_ROOT}/data-pipeline/.venv` and populated with the dependencies from
-`requirements.txt`.
+- runtime base: `${DATA_PIPELINE_DATA_ROOT}/data-pipeline`
+- runtime source copy: `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/src`
+- default runtime venv: `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/.venv`
+
+Generated outputs, manifests, reports, logs, and downloaded payloads belong under the runtime base, for example `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/growers` and `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared`. The committed checkout remains the source for installer scripts and baseline `src/` files, but runtime execution happens from the copied source.
+
+To persist the default data root for future login sessions, write the user environment file and still export the variable in the current shell before running commands:
+
+```bash
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/environment.d"
+cat > "${XDG_CONFIG_HOME:-$HOME/.config}/environment.d/60-my-farm-advisor.conf" <<'EOF'
+DATA_PIPELINE_DATA_ROOT=/absolute/path/to/my-farm-advisor-runtime
+EOF
+export DATA_PIPELINE_DATA_ROOT=/absolute/path/to/my-farm-advisor-runtime
+```
+
+The `environment.d` file applies to future sessions only. It does not update an already-running shell.
 
 ## Running inside OpenClaw CLI
 
@@ -33,9 +47,10 @@ activate the environment explicitly, but the entrypoints will install and re-exe
 themselves if the runtime venv is missing.
 
 ```bash
-bash -lc 'cd /data/workspace/data/my-farm-advisor/data-pipeline && \
-  source .venv/bin/activate && \
-  python src/scripts/run_farm_pipeline.py --grower-slug ... --farm-slug ...'
+bash -lc 'export DATA_PIPELINE_DATA_ROOT=/absolute/path/to/my-farm-advisor-runtime && \
+  cd "${DATA_PIPELINE_DATA_ROOT}/data-pipeline/src" && \
+  "${DATA_PIPELINE_DATA_ROOT}/data-pipeline/.venv/bin/python" \
+    scripts/run_farm_pipeline.py --grower-slug ... --farm-slug ...'
 ```
 
 This ensures every pipeline step (including geopandas/rasterio operations) uses

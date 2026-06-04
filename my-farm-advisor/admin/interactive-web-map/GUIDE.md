@@ -6,11 +6,11 @@ author: Boreal Bytes
 tags: [web-map, visualization, leaflet, geospatial, interactive, dashboard, choropleth]
 ---
 
-# Skill: interactive-web-map
+# Workflow: interactive-web-map
 
 ## Description
 
-Create professional, self-contained interactive web maps for agricultural data analysis. This skill teaches you to create **standalone HTML files** that can be opened directly in any web browser, shared via email, or deployed to any web server.
+Create professional, self-contained interactive web maps for agricultural data analysis. This workflow teaches you to create **standalone HTML files** that can be opened directly in any web browser, shared via email, or deployed to any web server.
 
 **Key Features:**
 
@@ -23,7 +23,7 @@ Create professional, self-contained interactive web maps for agricultural data a
 - **Performance optimized**: Handles 200+ fields smoothly using Canvas rendering
 - **Responsive design**: Works on desktop, tablet, and mobile
 
-## When to Use This Skill
+## When to Use This Workflow
 
 - **Sharing results**: Send a complete interactive dashboard to collaborators
 - **Field work**: Load maps on tablets for offline field reference

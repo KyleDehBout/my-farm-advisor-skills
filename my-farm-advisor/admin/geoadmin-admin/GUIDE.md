@@ -6,7 +6,7 @@ _Repo-native skill scaffold for shared geoadmin assets._
 
 ## 📋 Purpose
 
-This skill will own shared geoadmin data handling for the repository, including canonical Level 0, Level 1, and Level 2 admin roots under `data/my-farm-advisor/shared/geoadmin/`.
+This workflow owns shared geoadmin data handling for the repository, including canonical Level 0, Level 1, and Level 2 admin roots under `data/my-farm-advisor/shared/geoadmin/`.
 
 ## 📦 Scope
 

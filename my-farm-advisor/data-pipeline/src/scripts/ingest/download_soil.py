@@ -16,6 +16,7 @@ sys.path.insert(0, str(_SCRIPTS_DIR / "lib"))
 
 from paths import (  # pyright: ignore[reportMissingImports]
     farm_boundary_path,
+    farm_manifest_dir,
     farm_soil_sample_path,
     farm_ssurgo_full_path,
     farm_ssurgo_summary_path,
@@ -203,9 +204,8 @@ def main():
 
     grower_slug = os.environ.get("AG_GROWER_SLUG", "iowa-demo-grower")
     farm_slug = os.environ.get("AG_FARM_SLUG", "iowa-demo-farm")
-    inventory_path = Path(
-        os.environ.get("AG_INVENTORY_CSV", "data/my-farm-advisor/growers/iowa-demo-grower/farms/iowa-demo-farm/manifests/field-inventory.csv")
-    )
+    default_inventory = farm_manifest_dir(grower_slug, farm_slug) / "field-inventory.csv"
+    inventory_path = Path(os.environ.get("AG_INVENTORY_CSV", str(default_inventory)))
     ensure_canonical_data_tree(
         grower_slug=grower_slug, farm_slug=farm_slug, inventory_path=inventory_path
     )

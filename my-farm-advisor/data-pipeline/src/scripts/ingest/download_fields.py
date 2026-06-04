@@ -13,7 +13,7 @@ sys.path.insert(0, str(_SCRIPTS_DIR))
 
 
 def _load_bootstrap_helpers():
-    from lib.paths import farm_boundary_path, field_boundary_path
+    from lib.paths import farm_boundary_path, farm_manifest_dir, field_boundary_path
     from reporting_bootstrap import (
         ensure_canonical_data_tree,
         ensure_skill_path,
@@ -25,6 +25,7 @@ def _load_bootstrap_helpers():
 
     return (
         farm_boundary_path,
+        farm_manifest_dir,
         field_boundary_path,
         ensure_canonical_data_tree,
         field_slug_map_from_inventory,
@@ -35,6 +36,7 @@ def _load_bootstrap_helpers():
 def main():
     (
         farm_boundary_path,
+        farm_manifest_dir,
         field_boundary_path,
         ensure_canonical_data_tree,
         field_slug_map_from_inventory,
@@ -48,9 +50,8 @@ def main():
     grower_slug = os.environ.get("AG_GROWER_SLUG", "iowa-demo-grower")
     farm_slug = os.environ.get("AG_FARM_SLUG", "iowa-demo-farm")
     boundary_source_env = os.environ.get("AG_BOUNDARIES")
-    inventory_path = Path(
-        os.environ.get("AG_INVENTORY_CSV", "data/my-farm-advisor/growers/iowa-demo-grower/farms/iowa-demo-farm/manifests/field-inventory.csv")
-    )
+    default_inventory = farm_manifest_dir(grower_slug, farm_slug) / "field-inventory.csv"
+    inventory_path = Path(os.environ.get("AG_INVENTORY_CSV", str(default_inventory)))
     ensure_canonical_data_tree(
         grower_slug=grower_slug, farm_slug=farm_slug, inventory_path=inventory_path
     )

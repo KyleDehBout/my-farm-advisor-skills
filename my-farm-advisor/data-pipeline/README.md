@@ -40,10 +40,33 @@ Shared county weather for maturity-by-FIPS uses NASA POWER's public S3 Zarr stor
 ${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/weather/nasa-power/<year>/daily_weather_by_fips.parquet
 ```
 
-The default backend is equivalent to:
+For the full shared lower48 maturity baseline, initialize the runtime with multi-year county weather, GDD, corn RM, and soybean MG outputs. The default shared maturity range is 2021-2025 to match the farm weather and CDL helper defaults:
 
 ```bash
-python scripts/run_maturity_by_fips.py --year 2025 --weather-backend zarr --weather-time-standard lst
+export DATA_PIPELINE_DATA_ROOT=/absolute/path/to/my-farm-advisor-runtime
+cd my-farm-advisor/data-pipeline
+./scripts/install.sh --prepare-shared-maturity
+```
+
+That install flag runs the equivalent of:
+
+```bash
+python scripts/run_maturity_years_by_fips.py \
+  --start-year 2021 \
+  --end-year 2025 \
+  --coverage lower48 \
+  --weather-backend zarr \
+  --weather-time-standard lst
+```
+
+For a single annual refresh, run:
+
+```bash
+python scripts/run_maturity_by_fips.py \
+  --year 2025 \
+  --coverage lower48 \
+  --weather-backend zarr \
+  --weather-time-standard lst
 ```
 
 Use `--weather-backend api` only when explicitly debugging the legacy NASA POWER point API path.

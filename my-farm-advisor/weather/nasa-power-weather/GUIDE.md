@@ -164,17 +164,35 @@ The API is free and requires no key. NASA asks that users:
 - Cache results locally — the data does not change retroactively
 - Use the `AG` community for agricultural parameters
 
-For shared L2/county rebuilds, prefer the data-pipeline Zarr backend instead of the point API:
+For shared L2/county rebuilds, prefer the data-pipeline Zarr backend instead of the point API. The runtime initializer can build the supported 2021-2025 lower48 maturity baseline in one pass:
 
 ```bash
-python scripts/run_maturity_by_fips.py \
-  --year 2025 \
-  --coverage traditional-corn-belt \
+cd my-farm-advisor/data-pipeline
+./scripts/install.sh --prepare-shared-maturity
+```
+
+That calls the multi-year maturity runner:
+
+```bash
+python scripts/run_maturity_years_by_fips.py \
+  --start-year 2021 \
+  --end-year 2025 \
+  --coverage lower48 \
   --weather-backend zarr \
   --weather-time-standard lst
 ```
 
-The Zarr backend reads meteorology from `merra2/temporal/power_merra2_daily_temporal_lst.zarr` and solar radiation from `syn1deg/temporal/power_syn1deg_daily_temporal_lst.zarr`, then writes the same `daily_weather_by_fips.parquet` schema under `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/weather/nasa-power/<year>/`.
+For a single annual refresh, run:
+
+```bash
+python scripts/run_maturity_by_fips.py \
+  --year 2025 \
+  --coverage lower48 \
+  --weather-backend zarr \
+  --weather-time-standard lst
+```
+
+The Zarr backend reads meteorology from `merra2/temporal/power_merra2_daily_temporal_lst.zarr` and solar radiation from `syn1deg/temporal/power_syn1deg_daily_temporal_lst.zarr`, fills missing solar cells from the alternate POWER Zarr time-standard when available, then writes the same `daily_weather_by_fips.parquet` schema under `${DATA_PIPELINE_DATA_ROOT}/data-pipeline/shared/weather/nasa-power/<year>/`.
 
 ## Usage Examples
 

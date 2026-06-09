@@ -28,7 +28,7 @@ import geopandas as gpd
 
 from headlands_ring import create_headlands_ring, summarize_headlands
 
-fields = gpd.read_file('.opencode/skills/field-boundaries/examples/sample_2_fields.geojson')
+fields = gpd.read_file('my-farm-advisor/field-management/field-boundaries/examples/real_10_fields_iowa.geojson')
 field = fields.iloc[[0]].to_crs('EPSG:32615')
 
 ring = create_headlands_ring(field, width_m=9.0)

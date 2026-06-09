@@ -1,6 +1,7 @@
 node_modules/
 .cache/
 data/
+.my-farm-advisor-runtime/
 .sisyphus/
 
 # Generated outputs

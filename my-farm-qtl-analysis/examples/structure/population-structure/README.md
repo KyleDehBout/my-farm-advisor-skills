@@ -36,7 +36,7 @@ Sample3,PopB,1.89,0.03
 | `admixture_proportions.csv` | Population ancestry fractions |
 
 **Population Structure:**
-![PCA and Kinship](output/pca_kinship_example.png)
+Generated after running the example: `output/pca_kinship_example.png`
 
 **Key Findings:**
 - 3 distinct populations visible in PCA

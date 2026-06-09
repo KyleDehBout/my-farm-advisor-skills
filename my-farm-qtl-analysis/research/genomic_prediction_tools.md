@@ -11,9 +11,9 @@ Comprehensive guide to open-source alternatives for genomic prediction and BLUP 
 
 1. [Overview](#overview)
 2. [rrBLUP (R)](#1-rrblup-r)
-3. [BGLR - Bayesian Generalized Linear Regression (R)](#2-bglr---bayesian-generalized-linear-regression-r)
-4. [glmnet - Elastic Net (R & Python)](#3-glmnet---elastic-net-r--python)
-5. [sommer - Mixed Models (R)](#4-sommer---mixed-models-r)
+3. [BGLR - Bayesian Generalized Linear Regression (R)](#2-bglr-bayesian-generalized-linear-regression-r)
+4. [glmnet - Elastic Net (R & Python)](#3-glmnet-elastic-net-r-python)
+5. [sommer - Mixed Models (R)](#4-sommer-mixed-models-r)
 6. [Python scikit-learn Alternatives](#5-python-scikit-learn-alternatives)
 7. [Tool Comparison](#tool-comparison)
 8. [SNP Data Formats](#snp-data-formats)

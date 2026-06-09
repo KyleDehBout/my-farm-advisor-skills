@@ -35,7 +35,7 @@ ENSG000001234,Sample2,4.89
 | `tensorqtl_results.csv` | eQTL statistics (if tensorQTL available) |
 
 **LocusZoom Plot:**
-![LocusZoom](output/eqtl_locuszoom_example.png)
+Generated after running the example: `output/eqtl_locuszoom_example.png`
 
 **Key Findings:**
 - Lead SNP at position 1.0 Mb with p = 2e-15

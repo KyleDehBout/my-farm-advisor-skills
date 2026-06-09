@@ -36,7 +36,7 @@ FID,IID,pheno
 | `gwas_results_example.csv` | Raw statistics (p-values, betas) |
 
 **Manhattan Plot:**
-![Manhattan Plot](output/manhattan_example.png)
+Generated after running the example: `output/manhattan_example.png`
 
 **Key Findings:**
 - 2 significant loci detected on chromosomes 2 and 4

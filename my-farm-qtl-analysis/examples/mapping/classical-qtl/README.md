@@ -35,7 +35,7 @@ m3,1,20,S,S
 | `peaks.csv` | Significant QTL positions |
 
 **LOD Curve:**
-![LOD Curve](output/qtl_lod_example.png)
+Generated after running the example: `output/qtl_lod_example.png`
 
 **Key Findings:**
 - QTL peak at 50 cM with LOD = 6.2

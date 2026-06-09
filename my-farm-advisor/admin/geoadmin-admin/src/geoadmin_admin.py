@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -19,6 +20,9 @@ GEOADMIN_LEVELS = ("l0_countries", "l1_states", "l2_counties")
 
 
 def _shared_root() -> Path:
+    runtime_base = _runtime_base()
+    if runtime_base is not None:
+        return runtime_base / "shared"
     return REPO_ROOT / "data" / "shared"
 
 
@@ -30,8 +34,26 @@ def _geoadmin_level_root(level_slug: str) -> Path:
     return _geoadmin_root() / level_slug
 
 
+def _runtime_base() -> Path | None:
+    raw_data_root = os.environ.get("DATA_PIPELINE_DATA_ROOT")
+    if not raw_data_root:
+        return None
+    data_root = Path(raw_data_root).expanduser()
+    if not data_root.is_absolute():
+        raise ValueError(f"DATA_PIPELINE_DATA_ROOT must be absolute, got: {raw_data_root}")
+    return data_root.resolve(strict=False) / "data-pipeline"
+
+
 def _repo_relative(path: Path) -> str:
-    return str(path.resolve().relative_to(REPO_ROOT))
+    resolved = path.resolve(strict=False)
+    for root in (_runtime_base(), REPO_ROOT):
+        if root is None:
+            continue
+        try:
+            return str(resolved.relative_to(root.resolve(strict=False)))
+        except ValueError:
+            continue
+    return str(resolved)
 
 
 @dataclass(frozen=True, slots=True)

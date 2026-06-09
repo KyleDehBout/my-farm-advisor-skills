@@ -126,6 +126,7 @@ This skill is the analysis-heavy counterpart to breeding trial management. Trial
 ## Start Here
 
 - Main entrypoint: [`SKILL.md`](SKILL.md)
+- Progressive router: [`INDEX.md`](INDEX.md)
 - Visualization research summary: [`VISUALIZATION_SUMMARY.md`](VISUALIZATION_SUMMARY.md)
 - Optional helper CLI: [`scripts/qtl_cli.py`](scripts/qtl_cli.py)
 - Common baselines: `examples/mapping/gwas-lmm/`, `examples/mapping/eqtl-cis/`, `examples/mapping/classical-qtl/`, `examples/prediction/genomic-prediction/`

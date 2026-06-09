@@ -18,7 +18,6 @@ FORBIDDEN_PATHS=(
   node_modules
   .cache
   data
-  .sisyphus
 )
 
 FORBIDDEN_TRACKED_ASSETS=(
@@ -119,16 +118,17 @@ check_skill_metadata() {
   local skill_file="${skill_dir}/SKILL.md"
   local output
 
-  if output=$(python3 - "$skill_file" <<'PY'
+  if output=$(python3 - "$skill_file" "$skill_dir" <<'PY'
 import re
 import sys
 from pathlib import Path
 
 path = Path(sys.argv[1])
+expected_name = sys.argv[2]
 text = path.read_text(encoding='utf-8')
-match = re.search(r'(?ms)^---\s*$\n(.*?)\n^---\s*$', text)
+match = re.match(r'(?ms)^---\s*$\n(.*?)\n^---\s*$', text)
 if not match:
-    print('missing YAML frontmatter')
+    print('missing YAML frontmatter at start of file')
     raise SystemExit(1)
 
 frontmatter = match.group(1).splitlines()
@@ -156,8 +156,11 @@ for raw_line in frontmatter:
         in_metadata = False
 
 missing = []
-if not top.get('name'):
+actual_name = top.get('name')
+if not actual_name:
     missing.append('name')
+elif actual_name != expected_name:
+    missing.append(f'name must match directory ({expected_name}, got {actual_name})')
 if 'description' not in top:
     missing.append('description')
 if not (top.get('version') or meta.get('version') or meta.get('skill-version')):
@@ -302,6 +305,155 @@ PY
   fi
 }
 
+check_markdown_relative_links() {
+  local output
+  local link_files=()
+  local skill_dir
+  local required_markdown
+
+  if (( HAS_GIT == 0 )); then
+    warn 'Skipped markdown relative-link check because git metadata is unavailable'
+    return
+  fi
+
+  link_files=("${TRACKED_FILES[@]}")
+  for skill_dir in "${EXPECTED_SKILLS[@]}"; do
+    for required_markdown in SKILL.md README.md INDEX.md PROVENANCE.md AGENTS.md; do
+      if [[ -f "${skill_dir}/${required_markdown}" ]]; then
+        link_files+=("${skill_dir}/${required_markdown}")
+      fi
+    done
+  done
+
+  if output=$(python3 - "${link_files[@]}" <<'PY'
+import os
+import re
+import sys
+from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+root = Path('.').resolve()
+tracked_files = sorted(set(sys.argv[1:]))
+markdown_files = [Path(path) for path in tracked_files if path.endswith(('.md', '.markdown'))]
+link_pattern = re.compile(r'!?' + r'\[[^\]]*\]' + r'\(([^)]+)\)')
+scheme_pattern = re.compile(r'^[A-Za-z][A-Za-z0-9+.-]*:')
+
+
+def clean_target(raw_target):
+    target = raw_target.strip()
+    if not target:
+        return ''
+    if target.startswith('<'):
+        end = target.find('>')
+        if end != -1:
+            target = target[1:end].strip()
+    else:
+        title_match = re.search(r'\s+["\'()]', target)
+        if title_match:
+            target = target[:title_match.start()].strip()
+    return target
+
+
+def should_skip(target):
+    lowered = target.lower()
+    return (
+        not target
+        or target.startswith('//')
+        or lowered.startswith(('http://', 'https://', 'mailto:'))
+        or scheme_pattern.match(target) is not None
+    )
+
+
+def target_path(target):
+    split_target = urlsplit(target)
+    path = unquote(split_target.path)
+    if not path:
+        return None
+    if path.startswith('/'):
+        return root / path.lstrip('/')
+    return Path(path)
+
+
+def strip_fenced_code_blocks(text):
+    return re.sub(r'(?ms)^```.*?^```', '', text)
+
+
+def github_heading_slug(heading):
+    heading = re.sub(r'^[#]+\s*', '', heading).strip()
+    heading = re.sub(r'[`*_~]', '', heading)
+    heading = heading.lower()
+    heading = re.sub(r'[^a-z0-9\s-]', '', heading)
+    heading = re.sub(r'\s+', '-', heading.strip())
+    heading = re.sub(r'-+', '-', heading)
+    return heading
+
+
+def heading_slugs(text):
+    counts = {}
+    slugs = set()
+    for line in text.splitlines():
+        if not re.match(r'^#{1,6}\s+', line):
+            continue
+        base = github_heading_slug(line)
+        if not base:
+            continue
+        count = counts.get(base, 0)
+        counts[base] = count + 1
+        slugs.add(base if count == 0 else f'{base}-{count}')
+    return slugs
+
+
+missing = []
+for markdown_file in markdown_files:
+    source = root / markdown_file
+    try:
+        text = source.read_text(encoding='utf-8')
+    except UnicodeDecodeError:
+        continue
+    text = strip_fenced_code_blocks(text)
+
+    for raw_target in link_pattern.findall(text):
+        target = clean_target(raw_target)
+        if should_skip(target):
+            continue
+        split_target = urlsplit(target)
+        parsed_path = target_path(target)
+        resolved = source if parsed_path is None else (parsed_path if parsed_path.is_absolute() else source.parent / parsed_path)
+        resolved = resolved.resolve(strict=False)
+        try:
+            resolved.relative_to(root)
+        except ValueError:
+            missing.append(f'{markdown_file}: {target} -> outside repository')
+            continue
+        if not resolved.exists():
+            missing.append(f'{markdown_file}: {target} -> {os.path.relpath(resolved, root)}')
+            continue
+        if split_target.fragment and resolved.suffix.lower() in {'.md', '.markdown'}:
+            try:
+                target_text = strip_fenced_code_blocks(resolved.read_text(encoding='utf-8'))
+            except UnicodeDecodeError:
+                continue
+            fragment = unquote(split_target.fragment).lower()
+            if fragment not in heading_slugs(target_text):
+                missing.append(f'{markdown_file}: {target} -> missing heading #{split_target.fragment}')
+
+if missing:
+    print('\n'.join(missing))
+    raise SystemExit(1)
+PY
+  ); then
+    pass 'Markdown relative links valid'
+  else
+    if [[ -z "${output}" ]]; then
+      fail 'Markdown relative link check failed without output'
+      return
+    fi
+    while IFS= read -r line; do
+      [[ -n "${line}" ]] && fail "Missing markdown relative link target (${line})"
+    done <<<"${output}"
+  fi
+}
+
 printf '== Validation profile: my-farm-advisor-skills ==\n'
 
 require_file 'README.md' 'Root README'
@@ -318,6 +470,7 @@ for skill_dir in "${EXPECTED_SKILLS[@]}"; do
 
   require_file "${skill_dir}/SKILL.md" "Skill manifest for ${skill_dir}"
   require_file "${skill_dir}/README.md" "Skill README for ${skill_dir}"
+  require_file "${skill_dir}/INDEX.md" "Skill index for ${skill_dir}"
   require_file "${skill_dir}/PROVENANCE.md" "Skill provenance for ${skill_dir}"
 
   if [[ -s "${skill_dir}/SKILL.md" ]]; then
@@ -334,15 +487,20 @@ for asset_name in "${FORBIDDEN_TRACKED_ASSETS[@]}"; do
   check_asset_not_tracked "${asset_name}"
 done
 
+check_markdown_relative_links
+
 check_text_absent 'my-farm-qtl-analysis' 'scientific-skills/qtl-analysis/' 'Stale scientific-skills/qtl-analysis/ reference'
+check_text_absent 'my-farm-advisor' 'rebuild_data_folder.py' 'Stale farm-data-rebuild missing script reference'
+check_text_absent 'my-farm-advisor' 'data/my-farm-advisor/scripts/ingest/bootstrap_farm_from_county.py' 'Stale farm bootstrap script path reference'
+check_text_absent 'my-farm-advisor' '# Skill:' 'Nested farm guide Skill heading'
 
 geoadmin_root=''
-if [[ -d 'my-farm-advisor/r2-seed-pipeline/src/shared/geoadmin' ]]; then
-  geoadmin_root='my-farm-advisor/r2-seed-pipeline/src/shared/geoadmin'
+if [[ -d 'my-farm-advisor/data-pipeline/src/shared/geoadmin' ]]; then
+  geoadmin_root='my-farm-advisor/data-pipeline/src/shared/geoadmin'
 elif [[ -d 'my-farm-advisor/shared/geoadmin' ]]; then
   geoadmin_root='my-farm-advisor/shared/geoadmin'
-elif [[ -d 'my-farm-advisor/r2-seed-pipeline/src/data/geoadmin' ]]; then
-  geoadmin_root='my-farm-advisor/r2-seed-pipeline/src/data/geoadmin'
+elif [[ -d 'my-farm-advisor/data-pipeline/src/data/geoadmin' ]]; then
+  geoadmin_root='my-farm-advisor/data-pipeline/src/data/geoadmin'
 elif [[ -d 'shared/geoadmin' ]]; then
   geoadmin_root='shared/geoadmin'
 elif [[ -d 'geoadmin' ]]; then

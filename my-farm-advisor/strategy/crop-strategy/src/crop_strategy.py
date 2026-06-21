@@ -6,7 +6,7 @@ from typing import Any
 import pandas as pd
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class CropRegionGuidance:
     label: str
     planting_window: str

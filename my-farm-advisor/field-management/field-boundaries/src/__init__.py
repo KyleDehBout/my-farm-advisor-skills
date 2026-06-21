@@ -10,6 +10,7 @@ Output Formats:
 Filenames include CRS information: fields_EPSG4326.geojson
 """
 
+from __future__ import annotations
 from pathlib import Path
 from typing import Any
 

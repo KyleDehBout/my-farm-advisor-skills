@@ -4,6 +4,7 @@ This module provides helper functions for computing NDVI, creating static maps,
 and extracting per-field statistics from Sentinel-2 imagery.
 """
 
+from __future__ import annotations
 import warnings
 from pathlib import Path
 

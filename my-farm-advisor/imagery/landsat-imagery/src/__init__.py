@@ -11,6 +11,7 @@ Output Formats:
 Filenames include CRS: landsat_field_001_20240615_EPSG4326.tif
 """
 
+from __future__ import annotations
 from pathlib import Path
 from typing import Any
 

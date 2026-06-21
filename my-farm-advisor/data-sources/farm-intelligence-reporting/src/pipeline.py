@@ -79,7 +79,7 @@ def _sha256_file(path: Path) -> str:
     return hasher.hexdigest()
 
 
-@dataclass(slots=True)
+@dataclass()
 class FieldReportingConfig:
     farm_name: str
     field_boundary_path: str
@@ -119,7 +119,7 @@ class FieldReportingConfig:
         return self.field_root(field_slug) / "logs"
 
 
-@dataclass(slots=True)
+@dataclass()
 class StepManifest:
     step_name: str
     status: str

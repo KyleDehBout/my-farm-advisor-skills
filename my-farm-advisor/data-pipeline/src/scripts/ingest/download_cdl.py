@@ -3,6 +3,7 @@
 # pyright: reportMissingImports=false, reportAttributeAccessIssue=false, reportArgumentType=false, reportCallIssue=false, reportReturnType=false, reportGeneralTypeIssues=false
 """Download and summarize CDL crop composition for the active farm."""
 
+from __future__ import annotations
 import argparse
 import json
 import os

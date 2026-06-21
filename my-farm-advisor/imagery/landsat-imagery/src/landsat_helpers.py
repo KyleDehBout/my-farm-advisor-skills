@@ -5,6 +5,7 @@ resampling rasters to match different resolutions, and comparing Sentinel-2
 and Landsat data.
 """
 
+from __future__ import annotations
 import warnings
 from pathlib import Path
 

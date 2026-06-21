@@ -96,7 +96,7 @@ PANEL_REGISTRY: dict[str, dict[str, object]] = {
 # ---------------------------------------------------------------------------
 
 
-@dataclass(slots=True)
+@dataclass()
 class FieldContext:
     field_id: str
     area_acres: float

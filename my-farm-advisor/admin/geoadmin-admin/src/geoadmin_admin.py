@@ -56,7 +56,7 @@ def _repo_relative(path: Path) -> str:
     return str(resolved)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class GeoadminSource:
     level_slug: str
     source_name: str

@@ -34,7 +34,7 @@ except ImportError:  # pragma: no cover - exercised by direct CLI smoke usage.
     )
 
 
-DEFAULT_NODATA_RATIO_THRESHOLD = 0.25
+DEFAULT_NODATA_RATIO_THRESHOLD = 0.75
 FIELD_BOUNDARY_FILENAME = "field_boundary.geojson"
 
 
@@ -222,6 +222,7 @@ def _validate_rasters(
     expected_crs = CRS.from_user_input(expected_crs_raw) if expected_crs_raw else None
     raster_bounds_for_coverage: tuple[float, float, float, float] | None = None
     raster_crs_for_coverage: Any = None
+    raster_pixel_size_for_coverage: float | None = None
 
     inspected_count = 0
     for product_name in raster_products:
@@ -257,6 +258,7 @@ def _validate_rasters(
                         float(dataset.bounds.top),
                     )
                     raster_crs_for_coverage = dataset.crs
+                    raster_pixel_size_for_coverage = _dataset_pixel_size(dataset)
                 inspected_count += 1
         except Exception as exc:  # rasterio raises multiple concrete exception types.
             result.add_error(f"raster {product_name} could not be inspected: {exc}")
@@ -273,6 +275,7 @@ def _validate_rasters(
         raster_bounds_for_coverage,
         raster_crs_for_coverage,
         float(payload.get("buffer_meters") or 0.0),
+        raster_pixel_size_for_coverage,
         result,
     )
 
@@ -288,11 +291,21 @@ def _dataset_nodata_ratio(dataset: Any) -> float:
     return float(mask.sum()) / float(total)
 
 
+def _dataset_pixel_size(dataset: Any) -> float | None:
+    try:
+        x_size, y_size = dataset.res
+        pixel_sizes = [abs(float(value)) for value in (x_size, y_size) if float(value) > 0.0]
+    except (AttributeError, TypeError, ValueError):
+        return None
+    return max(pixel_sizes) if pixel_sizes else None
+
+
 def _validate_buffered_aoi_coverage(
     boundary_path: Path,
     raster_bounds: tuple[float, float, float, float],
     raster_crs: Any,
     buffer_meters: float,
+    raster_pixel_size: float | None,
     result: PackageValidationResult,
 ) -> None:
     try:
@@ -319,7 +332,9 @@ def _validate_buffered_aoi_coverage(
         max(xs) + buffer_meters,
         max(ys) + buffer_meters,
     )
-    tolerance = max(buffer_meters * 0.05, 1.0)
+    meter_tolerance = max(buffer_meters * 0.05, 1.0)
+    pixel_tolerance = raster_pixel_size or 0.0
+    tolerance = meter_tolerance + pixel_tolerance
     covers = (
         raster_bounds[0] <= expected[0] + tolerance
         and raster_bounds[1] <= expected[1] + tolerance

@@ -1,6 +1,6 @@
 # DEM Terrain Contract
 
-This package defines the foundational runtime contract for field-level DEM terrain products in My Farm Advisor. It intentionally contains only deterministic constants, dataclasses, product names, output schema fields, and manifest schema fields; it does not download DEM tiles, process rasters, create runtime directories, or write generated assets.
+This package defines the foundational runtime contract for field-level DEM terrain products in My Farm Advisor. It intentionally contains only deterministic constants, dataclasses, product names, output schema fields, manifest schema fields, and source resolver policy interfaces; it does not download DEM tiles, process rasters, create runtime directories, or write generated assets.
 
 ## Runtime path contract
 
@@ -48,6 +48,32 @@ The manifest must include these top-level fields exactly:
 `run_id`, `field_id`, `field_slug`, `buffer_meters`, `analysis_crs`, `selected_source`, `candidate_sources`, `fallback_reason`, `surface_type`, `source_resolution_m`, `source_horizontal_crs`, `source_vertical_datum`, `source_urls`, `license`, `citation`, `acquisition_date`, `publication_date`, `processing_parameters`, `warnings`, `outputs`, `checksums`, `generated_at`.
 
 The `outputs` records should be STAC-like where useful. Each asset should include an `href`, media `type`, `roles`, projection metadata such as `proj:epsg` or `proj:wkt2`, raster metadata such as nodata, data type, unit, and resolution, file size and checksum, and source/provenance links. DSM or mixed-surface fallbacks must set warning fields so farm-terrain analysis is not misrepresented as bare-earth DTM when vegetation or structures may affect elevations.
+
+## Source resolver policy
+
+`dem_terrain.source_resolver` defines stdlib-only adapter interfaces, source candidate records, provenance records, ranking configuration, and deterministic selection helpers. The placeholder adapter classes are safe to instantiate without credentials or network access. They expose responsibilities equivalent to `discover(aoi)`, `rank(candidates)`, `download(candidate, cache)`, `prepare(candidate)`, and `provenance(candidate)`, but real provider discovery, download, and raster preparation are reserved for later adapter tasks.
+
+Candidate provenance must preserve adapter id/name, source name, source and metadata URLs, license, citation, region policy, country/region hints, resolution in meters, surface type (`DTM`, `DEM`, `DSM`, or `unknown`), acquisition/publication dates, coverage score, direct/no-auth status, auth requirements, estimated download size, warnings, and fallback reason.
+
+The deterministic ranking policy is:
+
+1. Prefer candidates with valid AOI coverage.
+2. Prefer bare-earth or terrain-like surfaces (`DTM`, then `DEM`) over `DSM`.
+3. Prefer finer resolution.
+4. Apply source precedence for equal-quality candidates.
+5. Prefer newer acquisition or publication dates.
+6. Prefer direct no-auth root sources.
+7. Prefer smaller estimated downloads.
+
+For U.S. fields, source precedence is USGS TNM 3DEP 1m, then Illinois ILHMP/ISGS when the AOI intersects Illinois and that candidate is equal or better by resolution, recency, and surface type, then USGS 10m, USGS 30m, and optional OpenTopography only when explicitly configured. For global fields, precedence is registered national/regional provider, NASADEM, Copernicus GLO-30 DSM, ALOS AW3D30 DSM, then SRTM-compatible fallback.
+
+The resolver must not fail solely because only 30m coverage exists. It should still return the best raster candidate with a quality warning. If a DSM fallback wins, the selection must include a warning that elevations may include vegetation, buildings, or other above-ground objects and must not be represented as bare-earth DTM.
+
+## Open-Elevation rule
+
+Hosted Open-Elevation API is not used by this skill. Do not call the hosted service for discovery, ranking, or elevation sampling.
+
+Open-Elevation GitHub materials are research-only. The bundled data acquisition is based on CGIAR SRTM 250m, which is too coarse for the field-level DEM terrain target, and the GPL-2.0 code must not be copied, vendored, or partially imported into this repository.
 
 ## Git and asset boundary
 

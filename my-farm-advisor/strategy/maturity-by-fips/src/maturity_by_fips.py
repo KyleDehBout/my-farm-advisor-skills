@@ -41,7 +41,7 @@ _TRADITIONAL_CORN_STATE_FIPS = (
 )
 
 
-@dataclass(slots=True)
+@dataclass
 class AnnualMaturityConfig:
     year: int
     weather_source: str = "nasa-power"

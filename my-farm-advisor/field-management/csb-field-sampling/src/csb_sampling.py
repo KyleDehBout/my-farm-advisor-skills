@@ -4,6 +4,7 @@ This module provides functions to sample agricultural field boundaries
 deterministically using random seeds, with support for region and crop filtering.
 """
 
+from __future__ import annotations
 import warnings
 from pathlib import Path
 from typing import Union

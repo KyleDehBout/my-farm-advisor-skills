@@ -25,6 +25,7 @@ Usage:
     >>> soil = download_soil(fields)
 """
 
+from __future__ import annotations
 import warnings
 from pathlib import Path
 from typing import Any

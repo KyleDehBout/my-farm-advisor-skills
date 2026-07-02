@@ -203,6 +203,7 @@ def main() -> None:
         help="NASA POWER time standard for farm weather outputs",
     )
     parser.add_argument("--force", action="store_true", help="Force rerun all steps")
+    parser.add_argument("--skip-soil", action="store_true", help="Skip SSURGO soil steps")
     parser.add_argument(
         "--structure-test",
         action="store_true",
@@ -277,6 +278,18 @@ def main() -> None:
         ("reporting/generate_farm_html.py", "Self-contained HTML report"),
         ("reporting/generate_farm_markdown.py", "Markdown report"),
     ]
+    if args.skip_soil:
+        soil_scripts = {
+            "ingest/download_soil.py",
+            "reporting/generate_ssurgo_maps.py",
+            "reporting/generate_ssurgo_cards.py",
+            "reporting/generate_field_posters.py",
+            "reporting/generate_aggregate_poster.py",
+            "reporting/generate_farm_html.py",
+            "reporting/generate_farm_markdown.py",
+        }
+        steps = [(s, l) for s, l in steps if s not in soil_scripts]
+        print(f"  [skip-soil] Removed {13 - len(steps)} SSURGO-dependent steps, {len(steps)} steps remaining")
 
     all_ok = True
     extra_env = {

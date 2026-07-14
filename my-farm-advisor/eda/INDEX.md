@@ -7,3 +7,4 @@ Open these guides when analyzing agricultural datasets, comparing conditions, or
 - [Correlate Guide](eda-correlate/GUIDE.md) - pairwise and multivariate relationships
 - [Time Series Guide](eda-time-series/GUIDE.md) - seasonal and longitudinal views
 - [Visualize Guide](eda-visualize/GUIDE.md) - charts, plots, and dashboards
+- [Field Dashboard Guide](eda-field-dashboard/GUIDE.md) - per-field NDVI, weather, and CDL dashboards

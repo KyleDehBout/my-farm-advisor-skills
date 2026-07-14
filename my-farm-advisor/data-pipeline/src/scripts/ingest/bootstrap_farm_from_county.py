@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import http.client
 import json
 import subprocess
 import sys
 import time
+import urllib.parse
 from pathlib import Path
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent.parent
@@ -106,13 +108,29 @@ def _query_overpass_bbox(bbox: tuple[float, float, float, float]) -> dict:
     );
     out geom;
     """
+    body = urllib.parse.urlencode({"data": query})
     last_error: Exception | None = None
     for endpoint in OVERPASS_URLS:
+        parsed = urllib.parse.urlparse(endpoint)
         for attempt in range(1, 4):
             try:
-                response = requests.post(endpoint, data={"data": query}, timeout=240)
-                response.raise_for_status()
-                return response.json()
+                conn = http.client.HTTPSConnection(parsed.hostname, timeout=240)
+                conn.request(
+                    "POST", parsed.path, body=body,
+                    headers={
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Accept": "*/*",
+                        "Accept-Encoding": "identity",
+                        "User-Agent": "curl/8.5.0",
+                    },
+                )
+                resp = conn.getresponse()
+                if resp.status == 200:
+                    raw = resp.read()
+                    conn.close()
+                    return json.loads(raw)
+                conn.close()
+                raise RuntimeError(f"HTTP {resp.status}")
             except Exception as exc:
                 last_error = exc
                 if attempt < 3:
@@ -267,6 +285,8 @@ def _run_farm_pipeline(args, boundary_path: Path, inventory_path: Path) -> None:
     ]
     if args.force:
         cmd.append("--force")
+    if args.skip_soil:
+        cmd.append("--skip-soil")
     subprocess.run(cmd, cwd=str(DATA_ROOT), check=True)
 
 
@@ -305,6 +325,7 @@ def main() -> None:
         help="Run full farm pipeline after bootstrap",
     )
     parser.add_argument("--force", action="store_true", help="Pass --force to run_farm_pipeline")
+    parser.add_argument("--skip-soil", action="store_true", help="Skip SSURGO soil steps in pipeline")
     args = parser.parse_args()
 
     county = _load_target_county(args.state_fips, args.county_name)

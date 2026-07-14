@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Assignment 2 — Cross-Grower EDA Report</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    max-width: 1000px; margin: 2em auto; padding: 0 1.5em;
+    line-height: 1.6; color: #222;
+  }
+  h1 { font-size: 1.8em; border-bottom: 3px solid #2c7fb8; padding-bottom: 0.3em; }
+  h2 { font-size: 1.4em; color: #2c7fb8; margin-top: 1.8em; border-bottom: 1px solid #ddd; padding-bottom: 0.2em; }
+  h3 { font-size: 1.15em; color: #444; margin-top: 1.2em; }
+  .summary-table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+  .summary-table th, .summary-table td { border: 1px solid #ccc; padding: 0.4em 0.7em; text-align: center; font-size: 0.9em; }
+  .summary-table th { background: #e8f0f8; font-weight: 600; }
+  .plot-grid { display: flex; flex-wrap: wrap; gap: 1em; margin: 1em 0; justify-content: center; }
+  .plot-grid figure { margin: 0; flex: 1 1 300px; max-width: 480px; }
+  .plot-grid figure img { width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }
+  .plot-grid figcaption { font-size: 0.85em; color: #555; margin-top: 0.3em; text-align: center; }
+  .plot-wide { margin: 1em 0; text-align: center; }
+  .plot-wide figure img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }
+  .plot-wide figcaption { font-size: 0.85em; color: #555; margin-top: 0.3em; }
+  .note { background: #f8f8f8; border-left: 4px solid #2c7fb8; padding: 0.8em 1em; margin: 1em 0; border-radius: 3px; font-size: 0.92em; }
+  .limitation { background: #fff8e8; border-left: 4px solid #e8a838; padding: 0.8em 1em; margin: 0.5em 0; border-radius: 3px; font-size: 0.92em; }
+  ul { padding-left: 1.2em; }
+  li { margin-bottom: 0.3em; }
+  strong { color: #000; }
+  .two-col { display: flex; flex-wrap: wrap; gap: 1.5em; }
+  .two-col > figure { flex: 1 1 280px; margin: 0; }
+  .two-col > figure img { width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }
+  .two-col figcaption { font-size: 0.85em; color: #555; margin-top: 0.3em; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Assignment 2 — Cross-Grower Exploratory Data Analysis</h1>
+<p><strong>Date:</strong> July 2026 &nbsp;|&nbsp; <strong>Author:</strong> My Farm Advisor EDA Pipeline</p>
+
+<!-- ================================================================ -->
+<h2>1. Dataset Scope</h2>
+<p>
+This analysis compares three growers across the US Corn Belt. Each grower operates a single farm
+with 10 fields sampled from a representative county via OpenStreetMap farmland polygons.
+</p>
+
+<table class="summary-table">
+<tr>
+  <th>Grower</th><th>County</th><th>State FIPS</th><th>County FIPS</th>
+  <th>Fields</th><th>Mean Area (ac)</th><th>Mean T2M (&deg;C)</th><th>Mean Precip (mm/yr)</th>
+</tr>
+<tr>
+  <td><strong>Illinois</strong></td><td>DeKalb</td><td>17</td><td>037</td>
+  <td>10</td><td>89.7</td><td>10.4</td><td>854</td>
+</tr>
+<tr>
+  <td><strong>Iowa</strong></td><td>Hancock</td><td>19</td><td>081</td>
+  <td>10</td><td>312.6</td><td>9.4</td><td>822</td>
+</tr>
+<tr>
+  <td><strong>Nebraska</strong></td><td>Merrick</td><td>31</td><td>121</td>
+  <td>10</td><td>70.9</td><td>11.8</td><td>622</td>
+</tr>
+</table>
+
+<!-- ================================================================ -->
+<h2>2. Data Layers Used</h2>
+<ul>
+  <li><strong>Field Boundaries</strong> &mdash; OpenStreetMap farmland polygons via Overpass API, clipped to county boundaries, filtered to &ge;0.5 acres. Stored as GeoJSON with calculated area and FIPS attributes.</li>
+  <li><strong>Weather</strong> &mdash; NASA POWER daily time series (2021&ndash;2025) at field centroids via Zarr stores. Variables: T2M, T2M_MAX, T2M_MIN, PRECTOTCORR, ALLSKY_SFC_SW_DWN, RH2M, WS10M.</li>
+  <li><strong>CDL / Cropland</strong> &mdash; USDA Cropland Data Layer (2021&ndash;2025), zonal statistics per field per year. Includes crop classification, percentage coverage, and derived rotation analysis.</li>
+  <li><strong>Soil</strong> &mdash; Not used (see Section 8).</li>
+</ul>
+<p>All data was collected and processed by the My Farm Advisor data pipeline with <code>--skip-soil</code>.</p>
+
+<!-- ================================================================ -->
+<h2>3. Comparison Levels</h2>
+<ul>
+  <li><strong>Field level</strong> &mdash; Per-field statistics (area, crop percentages, temperature, precipitation) for all 30 fields across the three growers. See <code>field_level_summary.csv</code>.</li>
+  <li><strong>Field-year level</strong> &mdash; Dominant CDL crop per field per year (2021&ndash;2025), visualized as a tile plot to show rotation patterns at individual field resolution.</li>
+  <li><strong>Grower level</strong> &mdash; Aggregate statistics per grower (mean field size, mean crop composition, mean temperature and precipitation). See <code>grower_comparison_summary.csv</code>.</li>
+  <li><strong>Across-grower level</strong> &mdash; Direct visual comparison of distributions and relationships across all three growers, forming the primary analysis in this report.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2>4. Field Boundaries</h2>
+
+<h3>4.1 Statistical Visualizations</h3>
+
+<div class="two-col">
+<figure>
+  <img src="report_images/boundary_field_size_distribution.png" alt="Field size distribution histogram"/>
+  <figcaption><strong>Field Size Distribution.</strong> Histogram of field area (acres) per grower. Dashed red line shows the mean. Iowa fields are substantially larger (mean 313 ac) than Illinois (90 ac) or Nebraska (71 ac), likely reflecting different OSM mapping density and larger center-pivot-irrigated fields in Hancock County.</figcaption>
+</figure>
+<figure>
+  <img src="report_images/boundary_field_size_boxplot.png" alt="Field size boxplot"/>
+  <figcaption><strong>Field Size Comparison.</strong> Box plot with jittered individual points. Blue annotations show mean (&mu;) and median (M). The Iowa distribution is both higher and wider, with fields ranging from 19 to 660 acres. Illinois and Nebraska are more compact. The Nebraska distribution includes several very small fields (&lt;30 ac).</figcaption>
+</figure>
+</div>
+
+<h3>4.2 Geospatial Map</h3>
+<div class="plot-wide">
+<figure>
+  <img src="report_images/boundary_location_map.png" alt="Field boundary polygon map"/>
+  <figcaption><strong>Field Boundary Polygons Colored by Grower.</strong> Actual polygon shapes rendered at scale, with area labels at centroids. Illinois fields (green) cluster in DeKalb County (northern IL). Iowa fields (orange) in Hancock County (north-central IA). Nebraska fields (purple) in Merrick County along the Platte River valley. The polygons clearly show the irregular OSM-mapped shapes of the Illinois/ Iowa fields versus the more regular geometries in Nebraska.</figcaption>
+</figure>
+</div>
+
+<h3>4.3 Correlation Analysis</h3>
+<div class="plot-wide">
+<figure>
+  <img src="report_images/boundary_crop_correlation.png" alt="Field size vs corn percentage"/>
+  <figcaption><strong>Field Size vs Corn Percentage.</strong> Scatter plot with linear trend lines and Pearson correlation coefficients. Iowa shows a weak negative trend (r = &minus;0.31, ns), Illinois near-zero (r = 0.03, ns), and Nebraska a moderate positive trend (r = 0.46, ns). None of the correlations are statistically significant at &alpha; = 0.05, suggesting field size alone does not predict corn dominance in this sample. The wide scatter within each grower indicates other factors (rotation decisions, irrigation access, soil type) are more influential.</figcaption>
+</figure>
+</div>
+
+<!-- ================================================================ -->
+<h2>5. CDL / Cropland</h2>
+
+<h3>5.1 Statistical Visualizations</h3>
+
+<div class="two-col">
+<figure>
+  <img src="report_images/cdl_crop_composition.png" alt="CDL crop composition bar chart"/>
+  <figcaption><strong>Mean Crop Composition by Grower (Top 4 Crops).</strong> Nebraska has the highest mean corn coverage (71%) and correspondingly lower soybean (40%). Illinois is the most balanced (60% corn, 58% soy), consistent with classic corn-soy rotation. Iowa is intermediate. Grass/Pasture and Other Crops appear at low levels in all three growers.</figcaption>
+</figure>
+<figure>
+  <img src="report_images/cdl_crop_diversity.png" alt="Crop diversity violin plot"/>
+  <figcaption><strong>Crop Diversity per Field.</strong> Number of unique CDL crop classes observed over the 2021&ndash;2025 period. Illinois has the highest mean diversity (2.1), Nebraska the lowest (1.8). The violin shapes reveal that all Illinois and Iowa fields have exactly 2 unique crops (nearly all corn-soy rotation), while Nebraska has a subset of fields with only 1 unique crop (continuous corn).</figcaption>
+</figure>
+</div>
+
+<h3>5.2 Comparison / Correlation Analyses</h3>
+
+<div class="plot-wide">
+<figure>
+  <img src="report_images/cdl_field_crop_tile.png" alt="Per-field per-year crop tile plot"/>
+  <figcaption><strong>Dominant CDL Crop per Field per Year.</strong> Each row is a field, each column is a year, and the tile color indicates the dominant crop. This is the most information-dense single visualization in the report. Illinois and Iowa fields predominantly alternate between Corn (green) and Soybeans (orange) in a classic Midwestern rotation. Nebraska shows a different pattern: several fields are continuous corn (all-green rows like osm-1467726055, osm-796673259), while others alternate. This tile plot directly visualizes the rotation behavior at individual field resolution.</figcaption>
+</figure>
+</div>
+
+<div class="plot-wide">
+<figure>
+  <img src="report_images/cdl_rotation_comparison.png" alt="Rotation pattern distribution"/>
+  <figcaption><strong>Rotation Pattern Distribution by Grower.</strong> The Corn &rarr; Soybean transition is the most common pattern across all three growers. However, Nebraska has a notably higher fraction of Corn &rarr; Corn and Soybean &rarr; Corn transitions, confirming the tile plot observation of continuous corn and less diverse rotation. Illinois and Iowa are dominated by the standard Corn &rarr; Soybean &harr; Soybean &rarr; Corn two-year rotation.</figcaption>
+</figure>
+</div>
+
+<!-- ================================================================ -->
+<h2>6. Weather</h2>
+
+<h3>6.1 Statistical Visualizations</h3>
+
+<div class="two-col">
+<figure>
+  <img src="report_images/weather_seasonal_climatology.png" alt="Monthly climatology"/>
+  <figcaption><strong>Monthly Climatology (&plusmn;1&sigma;).</strong> Top: mean monthly temperature. Bottom: mean monthly precipitation. Nebraska (purple) is warmest year-round and driest, especially in summer months. Iowa (orange) is coolest, especially in winter. Illinois (green) is intermediate and wettest in spring/early summer. The &sigma; bands show interannual variability is largest in winter temperatures and summer precipitation.</figcaption>
+</figure>
+<figure>
+  <img src="report_images/weather_growing_season.png" alt="Growing season comparison"/>
+  <figcaption><strong>Growing Season (Apr&ndash;Sep) Comparison.</strong> Bold lines show grower means; faint lines show individual field trajectories to visualize within-grower field-to-field variability. Nebraska is consistently driest and warmest during the growing season across all five years. 2023 was a notably cooler, wetter year across all three sites. The per-field faint lines reveal that fields within the same grower track each other closely &mdash; weather variation across years is larger than microclimate variation across fields within a county.</figcaption>
+</figure>
+</div>
+
+<h3>6.2 Correlation Analysis</h3>
+<div class="plot-wide">
+<figure>
+  <img src="report_images/weather_crop_correlation.png" alt="Precipitation vs corn percentage"/>
+  <figcaption><strong>Field-Level Precipitation vs Corn Percentage.</strong> Mean annual precipitation versus mean corn coverage per field, with linear trend lines and Pearson r. The overall pattern shows a negative relationship: fields that receive less precipitation tend to have higher corn percentages. This is most visible in Nebraska (r = &minus;0.50, ns), where the driest fields approach 100% corn. The relationship is weaker in Illinois (r = &minus;0.10, ns) and Iowa (r = 0.04, ns). However, none of the correlations reach statistical significance given the small sample (10 fields per grower).</figcaption>
+</figure>
+</div>
+
+<!-- ================================================================ -->
+<h2>7. Limitations and Assumptions</h2>
+
+<div class="limitation">
+<strong>Small sample size.</strong> Each grower has only 10 fields, which limits the statistical power of correlation analyses. The Pearson r values reported should be interpreted as descriptive, not inferential.
+</div>
+<div class="limitation">
+<strong>OSM field boundaries.</strong> Fields were sampled from OpenStreetMap <code>landuse=farmland</code> polygons, which may not correspond to actual management boundaries, ownership parcels, or crop reporting units. Some polygons may be partial fields, particularly in areas with less complete OSM coverage.
+</div>
+<div class="limitation">
+<strong>CDL resolution.</strong> The USDA Cropland Data Layer has 30 m spatial resolution. Small fields, irregular boundaries, and mixed pixels may reduce classification accuracy at the field edge. The CDL crop codes also do not distinguish between irrigated and rainfed corn or soybeans, which is a significant factor in Nebraska.
+</div>
+<div class="limitation">
+<strong>Irrigation data.</strong> No irrigation information was available in the dataset. This is a notable gap for the Nebraska grower, where center-pivot irrigation is common in Merrick County. The higher corn percentages in Nebraska may reflect irrigation access rather than climatic adaptation.
+</div>
+<div class="limitation">
+<strong>Weather interpolation.</strong> NASA POWER provides grid-interpolated weather data (0.5&deg; resolution), not on-site station measurements. Local topography and microclimate effects are not captured, though the county-level aggregation mitigates this somewhat.
+</div>
+<div class="limitation">
+<strong>CDL-only crop attribution.</strong> The rotation analysis is based exclusively on CDL classifications. A field classified as continuous corn may in fact be following a different rotation with cover crops or periodic soybeans that fall below the CDL detection threshold in some years.
+</div>
+
+<!-- ================================================================ -->
+<h2>8. Soil Analysis</h2>
+<p>
+Soil analysis was <strong>not required</strong> for this assignment and was <strong>not performed</strong>. All data pipeline runs used the <code>--skip-soil</code> flag, which removes seven SSURGO-dependent pipeline steps (soil download, SSURGO maps, SSURGO cards, field posters, aggregate poster, farm HTML, and farm markdown). None of the EDA visualizations or summary tables in this report incorporate soil properties.
+</p>
+<p>
+The pipeline steps that <em>were</em> executed and which generated the data used in this report are: field boundary download, weather download, CDL download, satellite imagery download, NDVI composite generation, and NDVI card generation.
+</p>
+
+<!-- ================================================================ -->
+<h2>9. Summary of Findings</h2>
+<table class="summary-table">
+<tr><th>Category</th><th>Key Finding</th><th>Evidence</th></tr>
+<tr>
+  <td>Field size</td>
+  <td>Iowa fields are 3&ndash;10&times; larger than Illinois or Nebraska fields in this sample</td>
+  <td>Mean 313 ac vs 90 ac and 71 ac</td>
+</tr>
+<tr>
+  <td>CDL composition</td>
+  <td>Nebraska has the highest corn concentration (71%) and lowest soybean (40%)</td>
+  <td>Crop composition bar chart</td>
+</tr>
+<tr>
+  <td>Rotation</td>
+  <td>Illinois and Iowa follow standard corn-soy rotation; Nebraska has more continuous corn</td>
+  <td>Tile plot + rotation pattern chart</td>
+</tr>
+<tr>
+  <td>Crop diversity</td>
+  <td>Nebraska has lower crop diversity (1.8 unique crops) than Illinois (2.1) or Iowa (2.0)</td>
+  <td>Diversity violin plot</td>
+</tr>
+<tr>
+  <td>Climate</td>
+  <td>Nebraska is warmest and driest (11.8&deg;C, 622 mm/yr); Iowa coolest (9.4&deg;C); Illinois wettest (854 mm/yr)</td>
+  <td>Climatology + growing season plots</td>
+</tr>
+<tr>
+  <td>Weather &rarr; crop</td>
+  <td>Drier fields tend toward more corn (r &asymp; &minus;0.5 in NE), but correlations are not significant</td>
+  <td>Precip vs corn % scatter</td>
+</tr>
+<tr>
+  <td>Field size &rarr; crop</td>
+  <td>No significant relationship between field size and corn percentage</td>
+  <td>Field size vs corn % scatter</td>
+</tr>
+</table>
+
+<p style="margin-top: 2em; font-size: 0.85em; color: #888; text-align: center;">
+Report generated from the My Farm Advisor EDA pipeline &mdash; scripts/eda/eda_compare_growers.py<br>
+All runtime data is under <code>$DATA_PIPELINE_DATA_ROOT/data-pipeline/growers/</code>
+</p>
+
+</body>
+</html>

@@ -1,0 +1,4 @@
+grower,field_count,mean_area_acres,total_area_acres,mean_corn_pct,mean_soybean_pct,mean_crop_diversity,mean_t2m_c,mean_annual_precip_mm
+Illinois,10,89.7,897.1,59.6,57.9,2.1,10.4,854.0
+Iowa,10,312.6,3126.0,63.0,46.5,2.0,9.4,822.0
+Nebraska,10,70.9,708.8,71.2,39.9,1.8,11.8,622.0
